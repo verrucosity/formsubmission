@@ -1,6 +1,6 @@
 function organizeNewFormResponses() {
   var form = FormApp.getActiveForm();
-  var destinationFolder = DriveApp.getFolderById("1nFMIdHOf5kvpMtvATCiU9OlHYcxN5Y0J");
+  var destinationFolder = DriveApp.getFolderById("Insert_Folder_ID_Here");
 
   var formResponses = form.getResponses();
   var alreadyProcessedFileIds = [];
