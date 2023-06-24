@@ -1,6 +1,13 @@
 function organizeNewFormResponses() {
+  var config = {
+    destinationFolderId: "Insert_Folder_ID_Here",
+    formFields: ["Client Name", "Work Date", "Has Problem", "Problem Description"],
+    dateFieldFormat: "MM-dd-yyyy",
+    problemFileName: "Problem.txt"
+  };
+
   var form = FormApp.getActiveForm();
-  var destinationFolder = DriveApp.getFolderById("Insert_Folder_ID_Here");
+  var destinationFolder = DriveApp.getFolderById(config.destinationFolderId);
 
   var formResponses = form.getResponses();
   var alreadyProcessedFileIds = [];
@@ -11,10 +18,12 @@ function organizeNewFormResponses() {
     var items = formResponse.getItemResponses();
 
     // Initialize default values
-    var folderName = "Nombre del cliente no especificado";
-    var dateOfWork = "Fecha no especificada";
-    var hasProblem = false;
-    var problemDescription = "Sin problemas";
+    var formData = {
+      folderName: "Unnamed Client",
+      dateOfWork: "Unspecified Date",
+      hasProblem: false,
+      problemDescription: "No Problems"
+    };
 
     // Loop through each item in the form response
     for (var j = 0; j < items.length; j++) {
@@ -23,14 +32,14 @@ function organizeNewFormResponses() {
       var response = item.getResponse();
 
       // Update variables based on item responses
-      if (title === "Nombre del cliente") folderName = response;
-      else if (title === "Fecha del trabajo") dateOfWork = formatDate(new Date(response));
-      else if (title === "Algún problema?") hasProblem = response === "Sí";
-      else if (title === "Describe el problema" && hasProblem) problemDescription = response;
+      if (title === config.formFields[0]) formData.folderName = response;
+      else if (title === config.formFields[1]) formData.dateOfWork = formatDate(new Date(response));
+      else if (title === config.formFields[2]) formData.hasProblem = response === "Yes";
+      else if (title === config.formFields[3] && formData.hasProblem) formData.problemDescription = response;
     }
 
     // Check if folder with the same name already exists
-    var folder = getOrCreateFolder(destinationFolder, dateOfWork + " " + folderName);
+    var folder = getOrCreateFolder(destinationFolder, formData.dateOfWork + " " + formData.folderName);
 
     // Loop through each item again to handle file uploads
     for (var j = 0; j < items.length; j++) {
@@ -41,7 +50,7 @@ function organizeNewFormResponses() {
           if (alreadyProcessedFileIds.indexOf(fileId) == -1) {
             // Copy the file to the folder and rename it
             var file = DriveApp.getFileById(fileId);
-            var newFileName = createNewFileName(dateOfWork, file.getName());
+            var newFileName = createNewFileName(formData.dateOfWork, file.getName());
             file.makeCopy(newFileName, folder);
             alreadyProcessedFileIds.push(fileId);
           }
@@ -50,17 +59,14 @@ function organizeNewFormResponses() {
     }
 
     // Create a text file with problem details if there was a problem
-    if (hasProblem) {
-      folder.createFile("Problema.txt", problemDescription);
+    if (formData.hasProblem) {
+      folder.createFile(config.problemFileName, formData.problemDescription);
     }
   }
 
   // Helper function to format a date
   function formatDate(date) {
-    var year = date.getFullYear();
-    var month = date.getMonth() + 1;
-    var day = date.getDate();
-    return month + "-" + day + "-" + year;
+    return Utilities.formatDate(date, Session.getScriptTimeZone(), config.dateFieldFormat);
   }
 
   // Helper function to get or create a folder
